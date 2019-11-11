@@ -1,10 +1,11 @@
 package gosocketio
 
 import (
+	"bytes"
 	"encoding/json"
-	"github.com/graarh/golang-socketio/protocol"
-	"sync"
+	"github.com/vladivolo/golang-socketio/protocol"
 	"reflect"
+	"sync"
 )
 
 const (
@@ -98,8 +99,16 @@ func (m *methods) processIncomingMessage(c *Channel, msg *protocol.Message) {
 			return
 		}
 
+		args := []byte(msg.Args)
+
+		// Patch for stex.com custom responce (trim prefix "\"channel_name\"," )
+		idx := bytes.IndexAny(args, "{[")
+		if idx > 0 {
+			args = args[idx:]
+		}
+		// end path
 		data := f.getArgs()
-		err := json.Unmarshal([]byte(msg.Args), &data)
+		err := json.Unmarshal(args, &data)
 		if err != nil {
 			return
 		}
