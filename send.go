@@ -26,6 +26,7 @@ func send(msg *protocol.Message, c *Channel, args interface{}) error {
 
 	if args != nil {
 		json, err := json.Marshal(&args)
+		//fmt.Fprintf(os.Stderr, "json.Marshal(): %s\n", string(json))
 		if err != nil {
 			return err
 		}

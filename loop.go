@@ -187,6 +187,7 @@ func pinger(c *Channel) {
 	for {
 		interval, _ := c.conn.PingParams()
 		time.Sleep(interval)
+
 		if !c.IsAlive() {
 			return
 		}

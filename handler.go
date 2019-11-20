@@ -3,7 +3,9 @@ package gosocketio
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/vladivolo/golang-socketio/protocol"
+	"os"
 	"reflect"
 	"sync"
 )
@@ -40,7 +42,7 @@ func (m *methods) initMethods() {
 /**
 Add message processing function, and bind it to given method
 */
-func (m *methods) On(method string, f interface{}) error {
+func (m *methods) On(method string, f interface{}, channels ...string) error {
 	c, err := newCaller(f)
 	if err != nil {
 		return err
@@ -49,6 +51,9 @@ func (m *methods) On(method string, f interface{}) error {
 	m.messageHandlersLock.Lock()
 	defer m.messageHandlersLock.Unlock()
 	m.messageHandlers[method] = c
+	if len(channels) > 0 {
+		m.messageHandlers[method+channels[0]] = c
+	}
 
 	return nil
 }
@@ -56,11 +61,20 @@ func (m *methods) On(method string, f interface{}) error {
 /**
 Find message processing function associated with given method
 */
-func (m *methods) findMethod(method string) (*caller, bool) {
+func (m *methods) findMethod(method string, channels ...string) (*caller, bool) {
 	m.messageHandlersLock.RLock()
 	defer m.messageHandlersLock.RUnlock()
 
-	f, ok := m.messageHandlers[method]
+	var (
+		f  *caller
+		ok bool
+	)
+	if len(channels) > 0 {
+		f, ok = m.messageHandlers[method+channels[0]]
+	}
+	if !ok {
+		f, ok = m.messageHandlers[method]
+	}
 	return f, ok
 }
 
@@ -102,14 +116,27 @@ func (m *methods) processIncomingMessage(c *Channel, msg *protocol.Message) {
 		args := []byte(msg.Args)
 
 		// Patch for stex.com custom responce (trim prefix "\"channel_name\"," )
+		ch := []byte{}
 		idx := bytes.IndexAny(args, "{[")
 		if idx > 0 {
+			ch = args[1:idx]
+			idx_last := bytes.IndexAny(ch, "\"")
+			if idx_last > 0 {
+				ch = ch[:idx_last]
+				ff, ok := m.findMethod(msg.Method + string(ch))
+				if ok {
+					f = ff
+				}
+
+			}
 			args = args[idx:]
 		}
-		// end path
+		// end patch
+
 		data := f.getArgs()
 		err := json.Unmarshal(args, &data)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "json.Unmarshal() %s\n", err)
 			return
 		}
 
