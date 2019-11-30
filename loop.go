@@ -133,7 +133,8 @@ func inLoop(c *Channel, m *methods) error {
 			c.out <- protocol.PongMessage
 		case protocol.MessageTypePong:
 		default:
-			go m.processIncomingMessage(c, msg)
+			//go m.processIncomingMessage(c, msg)
+			m.processIncomingMessage(c, msg)
 		}
 	}
 	return nil
