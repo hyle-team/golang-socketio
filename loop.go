@@ -131,9 +131,9 @@ func inLoop(c *Channel, m *methods) error {
 			m.callLoopEvent(c, OnConnection)
 		case protocol.MessageTypePing:
 			c.out <- protocol.PongMessage
-		case protocol.MessageTypePong:
+		case protocol.MessageTypePong, protocol.MessageTypeEmpty:
+			break
 		default:
-			//go m.processIncomingMessage(c, msg)
 			m.processIncomingMessage(c, msg)
 		}
 	}

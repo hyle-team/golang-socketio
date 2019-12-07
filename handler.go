@@ -7,6 +7,7 @@ import (
 	"github.com/vladivolo/golang-socketio/protocol"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -52,7 +53,7 @@ func (m *methods) On(method string, f interface{}, channels ...string) error {
 	defer m.messageHandlersLock.Unlock()
 	m.messageHandlers[method] = c
 	if len(channels) > 0 {
-		m.messageHandlers[method+channels[0]] = c
+		m.messageHandlers[method+strings.ToLower(channels[0])] = c
 	}
 
 	return nil
@@ -70,7 +71,7 @@ func (m *methods) findMethod(method string, channels ...string) (*caller, bool) 
 		ok bool
 	)
 	if len(channels) > 0 {
-		f, ok = m.messageHandlers[method+channels[0]]
+		f, ok = m.messageHandlers[method+strings.ToLower(channels[0])]
 	}
 	if !ok {
 		f, ok = m.messageHandlers[method]
@@ -123,7 +124,7 @@ func (m *methods) processIncomingMessage(c *Channel, msg *protocol.Message) {
 			idx_last := bytes.IndexAny(ch, "\"")
 			if idx_last > 0 {
 				ch = ch[:idx_last]
-				ff, ok := m.findMethod(msg.Method + string(ch))
+				ff, ok := m.findMethod(msg.Method, string(ch))
 				if ok {
 					f = ff
 				}
@@ -131,6 +132,7 @@ func (m *methods) processIncomingMessage(c *Channel, msg *protocol.Message) {
 			}
 			args = args[idx:]
 		}
+
 		// end patch
 
 		data := f.getArgs()
@@ -140,7 +142,11 @@ func (m *methods) processIncomingMessage(c *Channel, msg *protocol.Message) {
 			return
 		}
 
+		fmt.Printf("MSG: [%s] <%v>\n", string(ch), data)
+
 		f.callFunc(c, data)
+
+		return
 
 	case protocol.MessageTypeAckRequest:
 		f, ok := m.findMethod(msg.Method)

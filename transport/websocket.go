@@ -3,6 +3,7 @@ package transport
 import (
 	"errors"
 	"github.com/gorilla/websocket"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -38,12 +39,15 @@ func (wsc *WebsocketConnection) GetMessage() (message string, err error) {
 		return "", err
 	}
 
+	defer reader.(io.Closer).Close()
+
 	//support only text messages exchange
 	if msgType != websocket.TextMessage {
 		return "", ErrorBinaryMessage
 	}
 
 	data, err := ioutil.ReadAll(reader)
+
 	if err != nil {
 		return "", ErrorBadBuffer
 	}
